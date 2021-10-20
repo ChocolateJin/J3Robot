@@ -10,7 +10,6 @@ def my_open_json(string_path):
         data=json.load(load_f)
         return data
 def my_write_json(input_data,string_path):
-    
     input_data_str=json.dumps(input_data,indent=4,ensure_ascii=False)
     with open(string_path,'w+',encoding='utf-8') as load_f:
         load_f.write(input_data_str)
@@ -57,7 +56,7 @@ def draw_picture_from_excel(excel_path):
 def kaituan_function(bot: miraicle.Mirai, msg: miraicle.GroupMessage):
     level_data=my_open_json('./data/level_data.json');
     kaituan_data=my_open_json('./data/kaituan_data.json')
-    sentense_re='开团 [\u4E00-\u9FA5A-Za-z0-9_]+ \d{1,}[\u4E00-\u9FA5A-Za-z0-9_]+ [\u4E00-\u9FA5A-Za-z0-9_]+'
+    sentense_re='开团[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+[ ]+\d{1,}[\u4E00-\u9FA5A-Za-z0-9_]+[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+'
     is_equal=re.search(sentense_re,msg.plain)
     if is_equal: #符合开团语句
         if (str(msg.sender) in level_data )==True: #存在等级
@@ -95,7 +94,7 @@ def baoming_function_2(bot:miraicle.Mirai,msg: miraicle.GroupMessage):
     #用于团员报名
     #报名格式为'报名 团名 角色名 职业 装分 位置'
     kaituan_data=my_open_json('./data/kaituan_data.json')
-    sentense_re='报名 [\u4E00-\u9FA5A-Za-z0-9_]+ ([\u4e00-\u9fa5])+ [\u4E00-\u9FA5A-Za-z0-9_]+ \d+(\.\d+)? [\u4E00-\u9FA5A-Za-z0-9_]'
+    sentense_re='报名[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+[ ]+([\u4e00-\u9fa5])+[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+[ ]+\d+(\.\d+)?[ ]+[\u4E00-\u9FA5A-Za-z0-9_]'
     is_equal=re.search(sentense_re,msg.plain) #判断是否符合报名格式
     if is_equal: #首先判断是否符合报名语句
         seperate_word=str.split(msg.plain) #分离信息
@@ -103,21 +102,30 @@ def baoming_function_2(bot:miraicle.Mirai,msg: miraicle.GroupMessage):
         zhuangfen=seperate_word[4];weizhi=seperate_word[5];
         if tuanming in kaituan_data: #判断是否存在该团
             if weizhi in kaituan_data[tuanming]['职业信息']: #存在报名的职业
-                max_zhiye_number= int(kaituan_data[tuanming]['职业信息'][weizhi]['总数'])
-                current_zhiye_number=len(kaituan_data[tuanming]['职业信息'][weizhi])-1
-                if max_zhiye_number >current_zhiye_number: #最大数大于当前人数
-                    to_add_dict={'角色'+str(current_zhiye_number+1):{
+                list_jvese_ming = list(kaituan_data[tuanming]['职业信息'][weizhi])
+                exist_jveseming_mark = 0;
+                for iter_zhiyeming in range(1,len(list_jvese_ming)):
+                    if jvese in kaituan_data[tuanming]['职业信息'][weizhi][list_jvese_ming[iter_zhiyeming]]['角色名']:
+                        exist_jveseming_mark = 1;
+                        break
+                if exist_jveseming_mark == 1:
+                    bot.send_group_msg(msg.group,'本次团本'+weizhi+'存在同名角色名:'+jvese+',报名失败!')
+                else:
+                    max_zhiye_number= int(kaituan_data[tuanming]['职业信息'][weizhi]['总数'])
+                    current_zhiye_number=len(kaituan_data[tuanming]['职业信息'][weizhi])-1
+                    if max_zhiye_number >current_zhiye_number: #最大数大于当前人数
+                        to_add_dict={'角色'+str(current_zhiye_number+1):{
                         '角色名':jvese,
                         '职业':zhiye,
                         '装分':zhuangfen,
                         'QQ':msg.sender,
                         '报名时间':time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) 
                         }};
-                    kaituan_data[tuanming]['职业信息'][weizhi].update(to_add_dict);
-                    my_write_json(kaituan_data,'./data/kaituan_data.json')
-                    bot.send_group_msg(msg.group,jvese+'报名成功!');
-                else:
-                    bot.send_group_msg(msg.group,'本次团本'+weizhi+'已满');
+                        kaituan_data[tuanming]['职业信息'][weizhi].update(to_add_dict);
+                        my_write_json(kaituan_data,'./data/kaituan_data.json')
+                        bot.send_group_msg(msg.group,jvese+'报名成功!');
+                    else:
+                        bot.send_group_msg(msg.group,'本次团本'+weizhi+'已满');
             else:
                 bot.send_group_msg(msg.group,'本次团本不存在'+weizhi+'位置');
         else:
@@ -166,8 +174,8 @@ all_zhiyexinxi[iter_zhiyexinxi]+',角色ID为:'+current_dict_2['角色名']+'\n'
 @miraicle.Mirai.receiver('GroupMessage')
 #用于查询某个团的详细信息
 def tuan_xinxi_chaxun(bot:miraicle.Mirai,msg: miraicle.GroupMessage):
-    is_equal1 = re.search('团信息查询 [\u4E00-\u9FA5A-Za-z0-9_]+',msg.plain)
-    is_equal2 =re.search('团信息查询 \d{1}$',msg.plain)
+    is_equal1 = re.search('团信息查询[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+',msg.plain)
+    is_equal2 =re.search('团信息查询[ ]+\d{1}$',msg.plain)
     kaituan_data=my_open_json('./data/kaituan_data.json');
     if is_equal1: check_type=1;
     if is_equal2:check_type=2;
@@ -201,7 +209,7 @@ def tuan_xinxi_chaxun(bot:miraicle.Mirai,msg: miraicle.GroupMessage):
 
 @miraicle.Mirai.receiver('GroupMessage')
 def shanchu_kaituan (bot:miraicle.Mirai,msg: miraicle.GroupMessage):
-    is_equal1 = re.search('删除开团 [\u4E00-\u9FA5A-Za-z0-9_]+',msg.plain)
+    is_equal1 = re.search('删除开团[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+',msg.plain)
     if is_equal1:
         level_data=my_open_json('./data/level_data.json')
         kaituan_data=my_open_json('./data/kaituan_data.json');
@@ -215,4 +223,30 @@ def shanchu_kaituan (bot:miraicle.Mirai,msg: miraicle.GroupMessage):
                 my_write_json(kaituan_data,'./data/kaituan_data.json')
             else:
                 bot.send_group_msg(msg.group,'错误!未查询到同名团')
+
+@miraicle.Mirai.receiver('GroupMessage')
+def qvxiao_baoming (bot:miraicle.Mirai,msg: miraicle.GroupMessage):
+    is_equal1 = re.search('取消报名[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+[ ]+[\u4E00-\u9FA5A-Za-z0-9_]+',msg.plain)
+    kaituan_data=my_open_json('./data/kaituan_data.json');
+    if is_equal1:
+        seperate_word = str.split(msg.plain)
+        tuanming = seperate_word[1];jvese = seperate_word[2];weizhi=seperate_word[3]#分别是团队名字和角色ID
+        if tuanming in kaituan_data:
+            if weizhi in kaituan_data[tuanming]['职业信息']:
+                list_jvese_ming = list(kaituan_data[tuanming]['职业信息'][weizhi])
+                exist_jveseming_mark = 0;
+                for iter_zhiyeming in range(1,len(list_jvese_ming)):
+                    if jvese in kaituan_data[tuanming]['职业信息'][weizhi][list_jvese_ming[iter_zhiyeming]]['角色名']:
+                        exist_jveseming_mark = 1;
+                        kaituan_data[tuanming]['职业信息'][weizhi]['角色'+str(iter_zhiyeming)]=kaituan_data[tuanming]['职业信息'][weizhi].pop('角色'+str(len(list_jvese_ming)-1))
+                        my_write_json(kaituan_data,'./data/kaituan_data.json')
+                        break
+                if exist_jveseming_mark ==1:
+                    bot.send_group_msg(msg.group,'成功取消报名!')
+                else:
+                    bot.send_group_msg(msg.group,'未查询到'+jvese+'在'+tuanming+weizhi+'的报名情况')
+            else:
+                bot.send_group_msg(msg.group,tuanming+'没有'+weizhi)
+        else:
+                bot.send_group_msg(msg.group,'没有查到名为\"'+tuanming+'\"的团')
     
